@@ -34,7 +34,7 @@ export default function Register() {
       const { data } = await authApi.register(payload);
       localStorage.setItem("cemsToken", data.token);
       localStorage.setItem("cemsUser", JSON.stringify(data.user));
-      navigate(data.user.role === "admin" ? "/admin" : "/student");
+      navigate(data.user.role === "admin" ? "/admin" : "/dashboard");
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed");
     } finally {
@@ -44,40 +44,49 @@ export default function Register() {
 
   return (
     <main className="auth-wrap">
-      <form className="card auth-card" onSubmit={handleSubmit}>
-        <h2>Create Account</h2>
-        <input name="name" placeholder="Name" value={form.name} onChange={handleChange} required />
-        <input type="email" name="email" placeholder="Email" value={form.email} onChange={handleChange} required />
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={handleChange}
-          required
-        />
-        <select name="role" value={form.role} onChange={handleChange}>
-          <option value="student">Student</option>
-          <option value="admin">Admin</option>
-        </select>
+      <form className="card auth-card p-4" onSubmit={handleSubmit}>
+        <h3 className="mb-3">Create Account</h3>
+        <div className="mb-3">
+          <input className="form-control" name="name" placeholder="Name" value={form.name} onChange={handleChange} required />
+        </div>
+        <div className="mb-3">
+          <input className="form-control" type="email" name="email" placeholder="Email" value={form.email} onChange={handleChange} required />
+        </div>
+        <div className="mb-3">
+          <input
+            className="form-control"
+            type="password"
+            name="password"
+            placeholder="Password"
+            value={form.password}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="mb-3">
+          <select className="form-select" name="role" value={form.role} onChange={handleChange}>
+            <option value="student">Student</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
 
         {form.role === "student" ? (
           <>
-            <input
+            <input className="form-control mb-3"
               name="rollNumber"
               placeholder="Roll Number"
               value={form.rollNumber}
               onChange={handleChange}
               required
             />
-            <input
+            <input className="form-control mb-3"
               name="mobileNumber"
               placeholder="Mobile Number"
               value={form.mobileNumber}
               onChange={handleChange}
               required
             />
-            <input
+            <input className="form-control mb-3"
               name="department"
               placeholder="Department"
               value={form.department}
@@ -87,11 +96,11 @@ export default function Register() {
           </>
         ) : null}
 
-        {error ? <div className="error">{error}</div> : null}
-        <button className="btn accent" type="submit" disabled={loading}>
+        {error ? <div className="alert alert-danger py-2">{error}</div> : null}
+        <button className="btn btn-primary w-100" type="submit" disabled={loading}>
           {loading ? "Creating..." : "Register"}
         </button>
-        <p>
+        <p className="mt-3 mb-0">
           Already have an account? <Link to="/login">Login</Link>
         </p>
       </form>

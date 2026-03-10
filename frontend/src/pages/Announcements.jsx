@@ -24,22 +24,29 @@ export default function Announcements() {
   }, []);
 
   return (
-    <div className="page-wrap">
+    <div className="container py-4">
       <Navbar />
-      <section className="hero">
-        <h1>Announcements</h1>
-        <p>Important event updates from admins.</p>
-      </section>
+      <div className="hero-banner mt-3 mb-4 p-4">
+        <h2 className="mb-1">Announcements</h2>
+        <p className="text-secondary mb-0">Important updates and notices for campus events.</p>
+      </div>
 
-      {loading ? <div className="loading">Loading announcements...</div> : null}
-      {error ? <div className="error">{error}</div> : null}
+      {loading ? (
+        <div className="text-center py-5">
+          <div className="spinner-border text-primary" role="status" />
+          <p className="mt-3 mb-0">Loading announcements...</p>
+        </div>
+      ) : null}
+      {error ? <div className="alert alert-danger">{error}</div> : null}
 
-      <section className="grid cards-grid">
+      <div className="row g-4">
         {announcements.map((item) => (
-          <AnnouncementCard key={item._id} announcement={item} />
+          <div className="col-md-6 col-lg-4" key={item._id}>
+            <AnnouncementCard announcement={item} />
+          </div>
         ))}
-        {!announcements.length && !loading ? <p>No announcements yet.</p> : null}
-      </section>
+      </div>
+      {!announcements.length && !loading ? <div className="alert alert-info mt-4">No announcements yet.</div> : null}
     </div>
   );
 }

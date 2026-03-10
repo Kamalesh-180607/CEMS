@@ -6,6 +6,9 @@ import AdminDashboard from "./pages/AdminDashboard";
 import EventDetails from "./pages/EventDetails";
 import EventRegistration from "./pages/EventRegistration";
 import Announcements from "./pages/Announcements";
+import EventsPage from "./pages/EventsPage";
+import RegisteredEvents from "./pages/RegisteredEvents";
+import StudentProfile from "./pages/StudentProfile";
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const token = localStorage.getItem("cemsToken");
@@ -16,7 +19,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   }
 
   if (!allowedRoles.includes(user.role)) {
-    return <Navigate to={user.role === "admin" ? "/admin" : "/student"} replace />;
+    return <Navigate to={user.role === "admin" ? "/admin" : "/dashboard"} replace />;
   }
 
   return children;
@@ -24,17 +27,43 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
 export default function App() {
   const user = JSON.parse(localStorage.getItem("cemsUser") || "null");
+  const homePath = user?.role === "admin" ? "/admin" : "/dashboard";
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to={user?.role === "admin" ? "/admin" : "/student"} replace />} />
+      <Route path="/" element={<Navigate to={homePath} replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/student" element={<Navigate to="/dashboard" replace />} />
       <Route
-        path="/student"
+        path="/dashboard"
         element={
           <ProtectedRoute allowedRoles={["student"]}>
             <StudentDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/events"
+        element={
+          <ProtectedRoute allowedRoles={["student"]}>
+            <EventsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/my-events"
+        element={
+          <ProtectedRoute allowedRoles={["student"]}>
+            <RegisteredEvents />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute allowedRoles={["student"]}>
+            <StudentProfile />
           </ProtectedRoute>
         }
       />

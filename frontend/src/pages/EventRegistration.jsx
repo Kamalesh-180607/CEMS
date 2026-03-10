@@ -51,7 +51,7 @@ export default function EventRegistration() {
       ...form,
       ...paymentPayload,
     });
-    navigate("/student");
+    navigate("/my-events");
   };
 
   const handleSubmit = async (e) => {
@@ -110,34 +110,46 @@ export default function EventRegistration() {
   };
 
   return (
-    <div className="page-wrap">
+    <div className="container py-4">
       <Navbar />
-      <section className="card auth-card">
-        <h2>Event Registration</h2>
-        <p>{event?.title}</p>
-        <p>{event ? (Number(event.eventPrice) > 0 ? `Fee: Rs. ${event.eventPrice}` : "Fee: Free") : ""}</p>
+      <section className="card border-0 shadow-sm p-4 mt-3">
+        <h3 className="mb-1">Event Registration</h3>
+        <p className="mb-1">{event?.title}</p>
+        <p className="text-secondary mb-4">{event ? (Number(event.eventPrice) > 0 ? `Fee: Rs. ${event.eventPrice}` : "Fee: Free") : ""}</p>
 
-        <form className="form-grid" onSubmit={handleSubmit}>
-          <input name="rollNumber" value={form.rollNumber} onChange={handleChange} placeholder="Roll Number" required />
+        <form className="row g-3" onSubmit={handleSubmit}>
+          <div className="col-md-6">
+            <input className="form-control" name="rollNumber" value={form.rollNumber} onChange={handleChange} placeholder="Roll Number" required />
+          </div>
+          <div className="col-md-6">
           <input
+            className="form-control"
             name="mobileNumber"
             value={form.mobileNumber}
             onChange={handleChange}
             placeholder="Mobile Number"
             required
           />
-          <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="Email" required />
+          </div>
+          <div className="col-md-6">
+            <input className="form-control" type="email" name="email" value={form.email} onChange={handleChange} placeholder="Email" required />
+          </div>
+          <div className="col-md-6">
           <input
+            className="form-control"
             name="department"
             value={form.department}
             onChange={handleChange}
             placeholder="Department"
             required
           />
-          {error ? <div className="error">{error}</div> : null}
-          <button className="btn accent" disabled={loading} type="submit">
+          </div>
+          {error ? <div className="col-12"><div className="alert alert-danger py-2">{error}</div></div> : null}
+          <div className="col-12">
+            <button className="btn btn-primary" disabled={loading} type="submit">
             {loading ? "Processing..." : Number(event?.eventPrice || 0) > 0 ? "Pay & Register" : "Register"}
-          </button>
+            </button>
+          </div>
         </form>
       </section>
     </div>

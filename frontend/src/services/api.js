@@ -37,10 +37,16 @@ export const registrationApi = {
   register: (payload) => api.post("/register", payload),
   createOrder: (payload) => api.post("/register/order", payload),
   getByEvent: (eventId) => api.get(`/register/event/${eventId}`),
+  getMyEvents: () => api.get("/registrations/my-events"),
 };
 
 export const announcementApi = {
   getAll: () => api.get("/announcements"),
+};
+
+export const usersApi = {
+  getProfile: () => api.get("/users/profile"),
+  updateProfile: (payload) => api.put("/users/update-profile", payload),
 };
 
 export default api;

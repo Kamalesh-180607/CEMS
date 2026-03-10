@@ -21,6 +21,8 @@ app.get("/", (req, res) => {
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/events", require("./routes/eventRoutes"));
 app.use("/api/register", require("./routes/registrationRoutes"));
+app.use("/api/registrations", require("./routes/registrationRoutes"));
+app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/announcements", require("./routes/announcementRoutes"));
 
 app.use((err, req, res, next) => {

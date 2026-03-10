@@ -84,6 +84,7 @@ const registerForEvent = async (req, res) => {
       paymentStatus: isPaidEvent ? "paid" : "free",
       paymentId: paymentId || "",
       orderId: orderId || "",
+      registrationDate: new Date(),
     });
 
     return res.status(201).json({
@@ -118,4 +119,26 @@ const getRegistrationsByEvent = async (req, res) => {
   }
 };
 
-module.exports = { createOrder, registerForEvent, getRegistrationsByEvent };
+const getMyRegisteredEvents = async (req, res) => {
+  try {
+    const registrations = await Registration.find({ studentId: req.user._id })
+      .populate("eventId", "title date time venue bannerImage eventType hostingClub")
+      .sort({ registrationDate: -1, createdAt: -1 });
+
+    const payload = registrations
+      .filter((entry) => entry.eventId)
+      .map((entry) => ({
+        _id: entry._id,
+        event: entry.eventId,
+        paymentStatus: entry.paymentStatus,
+        registrationStatus: "registered",
+        registrationDate: entry.registrationDate || entry.createdAt,
+      }));
+
+    return res.status(200).json(payload);
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to fetch registered events", error: error.message });
+  }
+};
+
+module.exports = { createOrder, registerForEvent, getRegistrationsByEvent, getMyRegisteredEvents };

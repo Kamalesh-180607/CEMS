@@ -1,32 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import EventCard from "../components/EventCard";
 import AnnouncementCard from "../components/AnnouncementCard";
-import { announcementApi, eventsApi } from "../services/api";
+import { announcementApi, eventsApi, registrationApi } from "../services/api";
 
 export default function StudentDashboard() {
   const [events, setEvents] = useState([]);
+  const [registeredEvents, setRegisteredEvents] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [filters, setFilters] = useState({
-    search: "",
-    eventType: "",
-    club: "",
-    status: "",
-  });
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       setError("");
       try {
-        const [eventsRes, announcementsRes] = await Promise.all([
-          eventsApi.getEvents(filters),
+        const [eventsRes, announcementsRes, myRegsRes] = await Promise.all([
+          eventsApi.getEvents(),
           announcementApi.getAll(),
+          registrationApi.getMyEvents(),
         ]);
         setEvents(eventsRes.data);
         setAnnouncements(announcementsRes.data.slice(0, 3));
+        setRegisteredEvents(myRegsRes.data);
       } catch (err) {
         setError(err.response?.data?.message || "Failed to load dashboard");
       } finally {
@@ -35,75 +33,94 @@ export default function StudentDashboard() {
     };
 
     loadData();
-  }, [filters.search, filters.eventType, filters.club, filters.status]);
+  }, []);
 
-  const clubs = useMemo(() => [...new Set(events.map((e) => e.hostingClub))], [events]);
+  const upcomingEvents = useMemo(() => {
+    const now = new Date();
+    return events.filter((event) => new Date(event.date) > now).slice(0, 3);
+  }, [events]);
+
+  const upcomingCount = useMemo(() => {
+    const now = new Date();
+    return events.filter((event) => new Date(event.date) > now).length;
+  }, [events]);
 
   return (
-    <div className="page-wrap">
+    <div className="container py-4">
       <Navbar />
-      <section className="hero">
-        <h1>Student Dashboard</h1>
-        <p>Explore events, filter quickly, and register in minutes.</p>
-      </section>
 
-      <section className="card filter-grid">
-        <input
-          placeholder="Search events"
-          value={filters.search}
-          onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-        />
-        <select
-          value={filters.eventType}
-          onChange={(e) => setFilters((prev) => ({ ...prev, eventType: e.target.value }))}
-        >
-          <option value="">All Categories</option>
-          <option value="Technical">Technical Events</option>
-          <option value="Non Technical">Non Technical Events</option>
-          <option value="Workshop">Workshops</option>
-        </select>
-        <select value={filters.club} onChange={(e) => setFilters((prev) => ({ ...prev, club: e.target.value }))}>
-          <option value="">All Clubs</option>
-          {clubs.map((club) => (
-            <option key={club} value={club}>
-              {club}
-            </option>
-          ))}
-        </select>
-        <select
-          value={filters.status}
-          onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}
-        >
-          <option value="">All Status</option>
-          <option value="upcoming">Upcoming</option>
-          <option value="ongoing">Ongoing</option>
-        </select>
-      </section>
+      <div className="hero-banner mt-3 mb-4 p-4">
+        <h2 className="mb-1">Welcome back</h2>
+        <p className="text-secondary mb-0">Check quick stats, latest announcements, and upcoming campus events.</p>
+      </div>
 
-      {loading ? <div className="loading">Loading dashboard...</div> : null}
-      {error ? <div className="error">{error}</div> : null}
-
-      <section className="grid two-col">
-        <div>
-          <h2>All Events</h2>
-          <div className="grid cards-grid">
-            {events.map((event) => (
-              <EventCard key={event._id} event={event} showRegister />
-            ))}
-            {!events.length && !loading ? <p>No events found.</p> : null}
+      <div className="row g-3 mb-4">
+        <div className="col-md-4">
+          <div className="card border-0 shadow-sm stat-card">
+            <div className="card-body">
+              <p className="text-secondary mb-1">Total Events</p>
+              <h3 className="mb-0">{events.length}</h3>
+            </div>
           </div>
         </div>
+        <div className="col-md-4">
+          <div className="card border-0 shadow-sm stat-card">
+            <div className="card-body">
+              <p className="text-secondary mb-1">Upcoming Events</p>
+              <h3 className="mb-0">{upcomingCount}</h3>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div className="card border-0 shadow-sm stat-card">
+            <div className="card-body">
+              <p className="text-secondary mb-1">Registered Events</p>
+              <h3 className="mb-0">{registeredEvents.length}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        <aside>
-          <h2>Latest Announcements</h2>
-          <div className="grid">
+      {loading ? (
+        <div className="text-center py-5">
+          <div className="spinner-border text-primary" role="status" />
+          <p className="mt-3 mb-0">Loading dashboard...</p>
+        </div>
+      ) : null}
+      {error ? <div className="alert alert-danger">{error}</div> : null}
+
+      <div className="row g-4">
+        <div className="col-lg-8">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h5 className="mb-0">Upcoming Events Preview</h5>
+            <Link to="/events" className="btn btn-outline-primary btn-sm">
+              View All Events
+            </Link>
+          </div>
+          <div className="row g-4">
+            {upcomingEvents.map((event) => (
+              <div className="col-md-6" key={event._id}>
+                <EventCard event={event} showRegister />
+              </div>
+            ))}
+            {!upcomingEvents.length && !loading ? <p className="text-secondary">No upcoming events right now.</p> : null}
+          </div>
+        </div>
+        <div className="col-lg-4">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h5 className="mb-0">Latest Announcements</h5>
+            <Link to="/announcements" className="btn btn-outline-secondary btn-sm">
+              View All
+            </Link>
+          </div>
+          <div className="d-grid gap-3">
             {announcements.map((announcement) => (
               <AnnouncementCard key={announcement._id} announcement={announcement} />
             ))}
-            {!announcements.length && !loading ? <p>No announcements yet.</p> : null}
+            {!announcements.length && !loading ? <p className="text-secondary">No announcements yet.</p> : null}
           </div>
-        </aside>
-      </section>
+        </div>
+      </div>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 Full-stack MERN application with role-based access for students and admins.
 
 ## Tech Stack
+
 - MongoDB
 - Express.js
 - React.js (Vite)
@@ -11,6 +12,7 @@ Full-stack MERN application with role-based access for students and admins.
 - Razorpay (Test Mode)
 
 ## Roles
+
 - Student
 - Admin
 
@@ -63,10 +65,12 @@ cems
 ## API Endpoints
 
 ### Auth
+
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 
 ### Events
+
 - `POST /api/events/create`
 - `GET /api/events`
 - `GET /api/events/:id`
@@ -74,14 +78,17 @@ cems
 - `DELETE /api/events/delete/:id`
 
 ### Registrations
+
 - `POST /api/register`
 - `GET /api/register/event/:eventId`
 - `POST /api/register/order` (Razorpay test order)
 
 ### Announcements
+
 - `GET /api/announcements`
 
 ## Features
+
 - JWT auth and role-based protected routes
 - Student profile fields (roll number, mobile number, department)
 - Event filtering by type, club, upcoming, ongoing
@@ -96,6 +103,7 @@ cems
 ## Setup
 
 ### 1) Backend
+
 ```bash
 cd backend
 npm install
@@ -104,6 +112,7 @@ npm run dev
 ```
 
 ### 2) Frontend
+
 ```bash
 cd ../frontend
 npm install
@@ -114,6 +123,7 @@ npm run dev
 ## Environment Variables
 
 Backend (`backend/.env`):
+
 - `PORT`
 - `MONGO_URI`
 - `JWT_SECRET`
@@ -121,10 +131,12 @@ Backend (`backend/.env`):
 - `RAZORPAY_KEY_SECRET`
 
 Frontend (`frontend/.env`):
+
 - `VITE_API_BASE_URL`
 - `VITE_FILE_BASE_URL`
 
 ## Deployment Notes
+
 - Use production MongoDB URI and strong JWT secret.
 - Set Razorpay live keys only for production.
 - Configure CORS for deployed frontend URL.

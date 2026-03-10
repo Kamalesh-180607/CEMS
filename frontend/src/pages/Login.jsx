@@ -19,7 +19,7 @@ export default function Login() {
       const { data } = await authApi.login(form);
       localStorage.setItem("cemsToken", data.token);
       localStorage.setItem("cemsUser", JSON.stringify(data.user));
-      navigate(data.user.role === "admin" ? "/admin" : "/student");
+      navigate(data.user.role === "admin" ? "/admin" : "/dashboard");
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
     } finally {
@@ -29,23 +29,28 @@ export default function Login() {
 
   return (
     <main className="auth-wrap">
-      <form className="card auth-card" onSubmit={handleSubmit}>
-        <h2>Welcome to CEMS</h2>
-        <p>Campus Event Management System</p>
-        <input type="email" name="email" placeholder="Email" value={form.email} onChange={handleChange} required />
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={handleChange}
-          required
-        />
-        {error ? <div className="error">{error}</div> : null}
-        <button className="btn accent" type="submit" disabled={loading}>
+      <form className="card auth-card p-4" onSubmit={handleSubmit}>
+        <h3 className="mb-1">Welcome to CEMS</h3>
+        <p className="text-secondary mb-4">Campus Event Management System</p>
+        <div className="mb-3">
+          <input className="form-control" type="email" name="email" placeholder="Email" value={form.email} onChange={handleChange} required />
+        </div>
+        <div className="mb-3">
+          <input
+            className="form-control"
+            type="password"
+            name="password"
+            placeholder="Password"
+            value={form.password}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        {error ? <div className="alert alert-danger py-2">{error}</div> : null}
+        <button className="btn btn-primary w-100" type="submit" disabled={loading}>
           {loading ? "Signing in..." : "Login"}
         </button>
-        <p>
+        <p className="mt-3 mb-0">
           New user? <Link to="/register">Register here</Link>
         </p>
       </form>

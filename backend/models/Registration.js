@@ -49,6 +49,10 @@ const registrationSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    registrationDate: {
+      type: Date,
+      default: Date.now,
+    },
   },
   { timestamps: true }
 );
