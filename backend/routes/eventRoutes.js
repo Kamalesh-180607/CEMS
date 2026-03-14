@@ -10,7 +10,7 @@ const {
   getMyEvents,
   getEventRecommendations,
 } = require("../controllers/eventController");
-const { protect, optionalAuth, authorize } = require("../middleware/authMiddleware");
+const { protect, optionalAuth, authorize, adminOnly } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
@@ -32,15 +32,15 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter });
 
-router.post("/create", protect, authorize("admin"), upload.single("bannerImage"), createEvent);
-router.post("/", protect, authorize("admin"), upload.single("bannerImage"), createEvent);
+router.post("/create", protect, adminOnly, upload.single("bannerImage"), createEvent);
+router.post("/", protect, adminOnly, upload.single("bannerImage"), createEvent);
 router.get("/my/list", protect, authorize("admin"), getMyEvents);
 router.get("/recommendations", protect, authorize("student"), getEventRecommendations);
 router.get("/", optionalAuth, getEvents);
 router.get("/:id", protect, getEventById);
-router.put("/update/:id", protect, authorize("admin"), upload.single("bannerImage"), updateEvent);
-router.put("/:id", protect, authorize("admin"), upload.single("bannerImage"), updateEvent);
-router.delete("/:id", protect, authorize("admin"), deleteEvent);
-router.delete("/delete/:id", protect, authorize("admin"), deleteEvent);
+router.put("/update/:id", protect, adminOnly, upload.single("bannerImage"), updateEvent);
+router.put("/:id", protect, adminOnly, upload.single("bannerImage"), updateEvent);
+router.delete("/:id", protect, adminOnly, deleteEvent);
+router.delete("/delete/:id", protect, adminOnly, deleteEvent);
 
 module.exports = router;

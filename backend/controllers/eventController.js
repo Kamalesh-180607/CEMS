@@ -135,13 +135,18 @@ const updateEvent = async (req, res) => {
     }
 
     const updates = { ...req.body };
+    const shouldRemovePoster = String(req.body.removePoster || "").toLowerCase() === "true";
     if (updates.eventPrice !== undefined) {
       updates.eventPrice = Number(updates.eventPrice);
     }
 
-    if (req.file) {
+    if (shouldRemovePoster) {
+      updates.bannerImage = null;
+    } else if (req.file) {
       updates.bannerImage = `/uploads/${req.file.filename}`;
     }
+
+    delete updates.removePoster;
 
     const nextDate = updates.date !== undefined ? updates.date : oldEvent.date;
     const nextTime = updates.time !== undefined ? updates.time : oldEvent.time;

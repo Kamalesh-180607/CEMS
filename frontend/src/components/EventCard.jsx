@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import PosterPreviewModal from "./PosterPreviewModal";
+import { formatDate } from "../utils/date";
 
 const POSTER_PLACEHOLDER = `data:image/svg+xml;utf8,${encodeURIComponent(`
   <svg xmlns="http://www.w3.org/2000/svg" width="800" height="440" viewBox="0 0 800 440">
@@ -20,15 +21,6 @@ const POSTER_PLACEHOLDER = `data:image/svg+xml;utf8,${encodeURIComponent(`
   </svg>
 `)}`;
 
-const formatDate = (date) => {
-  const d = new Date(date);
-  if (Number.isNaN(d.getTime())) return "--/--/----";
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
-};
-
 export default function EventCard({ event, showRegister = false, isRegistered = false, eventStatus = "", hasNewUpdates = false }) {
   const isPaid = Number(event.eventPrice) > 0;
   const banner = event.bannerImage
@@ -37,6 +29,9 @@ export default function EventCard({ event, showRegister = false, isRegistered = 
   const statusLabel = eventStatus === "ongoing" ? "Ongoing" : eventStatus === "upcoming" ? "Upcoming" : "";
   const shortDescription = (event.description || "").slice(0, 120);
   const [previewPoster, setPreviewPoster] = useState(null);
+  const registrationClosed = event?.registrationDeadline
+    ? new Date() > new Date(event.registrationDeadline)
+    : false;
 
   return (
     <article className="card event-card h-100 border-0 shadow-sm">
@@ -78,6 +73,10 @@ export default function EventCard({ event, showRegister = false, isRegistered = 
             isRegistered ? (
               <button type="button" className="btn btn-sm event-action-btn event-action-registered registered-btn" disabled>
                 Registered
+              </button>
+            ) : registrationClosed ? (
+              <button type="button" className="btn btn-sm event-action-btn event-action-registered registered-btn" disabled>
+                Registration Ended
               </button>
             ) : (
               <Link className="btn btn-primary btn-sm event-action-btn event-action-primary register-btn" to={`/events/${event._id}/register`}>

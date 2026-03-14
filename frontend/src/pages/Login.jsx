@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { authApi } from "../services/api";
 import Logo from "../components/Logo";
 
@@ -10,6 +10,15 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Redirect already-authenticated users away from the login page
+  // (all hooks above must be declared before any early return)
+  const existingToken = localStorage.getItem("cemsToken");
+  let existingUser = null;
+  try { existingUser = JSON.parse(localStorage.getItem("cemsUser")); } catch { /* ignore */ }
+  if (existingToken && existingUser?.role) {
+    return <Navigate to={existingUser.role === "admin" ? "/admin" : "/dashboard"} replace />;
+  }
 
   const handleChange = (e) => setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 

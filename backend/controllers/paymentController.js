@@ -22,6 +22,10 @@ const createPaymentOrder = async (req, res) => {
       return res.status(400).json({ message: "This event was removed by the admin" });
     }
 
+    if (event.registrationDeadline && new Date() > new Date(event.registrationDeadline)) {
+      return res.status(400).json({ message: "Registration deadline has passed" });
+    }
+
     const serverAmount = Number(event.eventPrice || 0);
     if (serverAmount <= 0) {
       return res.status(400).json({ message: "This event is free. No payment required." });

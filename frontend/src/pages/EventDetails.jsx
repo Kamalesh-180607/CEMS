@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { FiBell } from "react-icons/fi";
 import Navbar from "../components/Navbar";
 import { eventsApi, registrationApi } from "../services/api";
+import { formatDate } from "../utils/date";
 
 export default function EventDetails() {
   const { id } = useParams();
@@ -66,6 +67,9 @@ export default function EventDetails() {
   }
 
   const isDeleted = event.status === "deleted";
+  const registrationClosed = event?.registrationDeadline
+    ? new Date() > new Date(event.registrationDeadline)
+    : false;
   const visibleUpdates = user?.role === "student"
     ? (registeredAt
       ? (event.updates || []).filter((entry) => new Date(entry.date || entry.createdAt) > new Date(registeredAt))
@@ -100,14 +104,14 @@ export default function EventDetails() {
           </div>
         ) : null}
         <div className="row g-2 mb-3">
-          <div className="col-md-6 small text-secondary">Date: {new Date(event.date).toLocaleDateString()}</div>
+          <div className="col-md-6 small text-secondary">Date: {formatDate(event.date)}</div>
           <div className="col-md-6 small text-secondary">Time: {event.time}</div>
           <div className="col-md-6 small text-secondary">Venue: {event.venue}</div>
           <div className="col-md-6 small text-secondary">
             Contact: {event.contactPersonName} ({event.contactPhoneNumber})
           </div>
           <div className="col-md-6 small text-secondary">
-            Registration Deadline: {new Date(event.registrationDeadline).toLocaleDateString()}
+            Registration Deadline: {formatDate(event.registrationDeadline)}
           </div>
           <div className="col-md-6 small d-flex gap-3">
             {event.instagramLink ? <a href={event.instagramLink}>Instagram</a> : null}
@@ -133,9 +137,15 @@ export default function EventDetails() {
           </section>
         ) : null}
         {user?.role === "student" && !isDeleted ? (
-          <Link className="btn btn-primary" to={`/events/${event._id}/register`}>
-            Register for this event
-          </Link>
+          registrationClosed ? (
+            <button type="button" className="btn btn-secondary" disabled>
+              Registration Ended
+            </button>
+          ) : (
+            <Link className="btn btn-primary" to={`/events/${event._id}/register`}>
+              Register for this event
+            </Link>
+          )
         ) : null}
       </section>
     </div>

@@ -21,6 +21,7 @@ const defaultForm = {
 export default function EventForm({ initialData, onSubmit, onCancel, loading, postAnnouncement, setPostAnnouncement }) {
   const [form, setForm] = useState(defaultForm);
   const [posterPreview, setPosterPreview] = useState(null);
+  const [removePoster, setRemovePoster] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -42,6 +43,7 @@ export default function EventForm({ initialData, onSubmit, onCancel, loading, po
         eventPrice: initialData.eventPrice ?? 0,
         bannerImage: null,
       });
+      setRemovePoster(false);
       if (initialData.bannerImage) {
         setPosterPreview(
           `${import.meta.env.VITE_FILE_BASE_URL || "http://localhost:5000"}${initialData.bannerImage}`
@@ -50,6 +52,7 @@ export default function EventForm({ initialData, onSubmit, onCancel, loading, po
     } else {
       setForm(defaultForm);
       setPosterPreview(null);
+      setRemovePoster(false);
     }
   }, [initialData]);
 
@@ -58,12 +61,15 @@ export default function EventForm({ initialData, onSubmit, onCancel, loading, po
     if (name === "bannerImage") {
       const file = files[0];
       setForm((prev) => ({ ...prev, bannerImage: file }));
+      setRemovePoster(false);
       if (file) {
         const reader = new FileReader();
         reader.onload = (event) => {
           setPosterPreview(event.target.result);
         };
         reader.readAsDataURL(file);
+      } else if (!initialData?.bannerImage) {
+        setPosterPreview(null);
       }
       return;
     }
@@ -132,7 +138,7 @@ export default function EventForm({ initialData, onSubmit, onCancel, loading, po
     }
     
     console.log("All validations passed, submitting form...");
-    onSubmit(form);
+    onSubmit({ ...form, removePoster });
   };
 
   return (
@@ -362,6 +368,17 @@ export default function EventForm({ initialData, onSubmit, onCancel, loading, po
               <div className="poster-preview-container">
                 <label className="form-label admin-form-label mb-2">Poster Preview</label>
                 <img src={posterPreview} alt="Poster Preview" className="poster-preview-image" />
+                <button
+                  type="button"
+                  className="btn btn-outline-danger btn-sm mt-2"
+                  onClick={() => {
+                    setPosterPreview(null);
+                    setForm((prev) => ({ ...prev, bannerImage: null }));
+                    setRemovePoster(Boolean(initialData?.bannerImage));
+                  }}
+                >
+                  Remove Poster
+                </button>
               </div>
             </motion.div>
           )}

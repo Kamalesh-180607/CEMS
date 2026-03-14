@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { authApi } from "../services/api";
 import Logo from "../components/Logo";
 
@@ -18,6 +18,14 @@ export default function Register() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Redirect already-authenticated users away from the register page
+  const existingToken = localStorage.getItem("cemsToken");
+  let existingUser = null;
+  try { existingUser = JSON.parse(localStorage.getItem("cemsUser")); } catch { /* ignore */ }
+  if (existingToken && existingUser?.role) {
+    return <Navigate to={existingUser.role === "admin" ? "/admin" : "/dashboard"} replace />;
+  }
 
   const validateForm = (data) => {
     const errs = {};

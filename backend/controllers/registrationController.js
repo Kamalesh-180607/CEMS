@@ -20,6 +20,10 @@ const createOrder = async (req, res) => {
       return res.status(400).json({ message: "This event was removed by the admin" });
     }
 
+    if (event.registrationDeadline && new Date() > new Date(event.registrationDeadline)) {
+      return res.status(400).json({ message: "Registration deadline has passed" });
+    }
+
     if (event.eventPrice <= 0) {
       return res.status(400).json({ message: "This event is free. No payment required." });
     }
@@ -64,6 +68,10 @@ const registerForEvent = async (req, res) => {
 
     if (event.status === "deleted") {
       return res.status(400).json({ message: "This event was removed by the admin" });
+    }
+
+    if (event.registrationDeadline && new Date() > new Date(event.registrationDeadline)) {
+      return res.status(400).json({ message: "Registration deadline has passed" });
     }
 
     const existingRegistration = await Registration.findOne({

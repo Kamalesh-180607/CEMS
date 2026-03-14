@@ -10,21 +10,8 @@ import Announcements from "./pages/Announcements";
 import RegisteredEvents from "./pages/RegisteredEvents";
 import StudentProfile from "./pages/StudentProfile";
 import SplashScreen from "./components/SplashScreen";
-
-const ProtectedRoute = ({ children, allowedRoles }) => {
-  const token = localStorage.getItem("cemsToken");
-  const user = JSON.parse(localStorage.getItem("cemsUser") || "null");
-
-  if (!token || !user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!allowedRoles.includes(user.role)) {
-    return <Navigate to={user.role === "admin" ? "/admin" : "/dashboard"} replace />;
-  }
-
-  return children;
-};
+import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/AdminRoute";
 
 export default function App() {
   const location = useLocation();
@@ -57,6 +44,14 @@ export default function App() {
           }
         />
         <Route
+          path="/registered-events"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <RegisteredEvents />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/profile"
           element={
             <ProtectedRoute allowedRoles={["student", "admin"]}>
@@ -67,25 +62,41 @@ export default function App() {
         <Route
           path="/admin"
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminRoute>
               <AdminDashboard />
-            </ProtectedRoute>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/dashboard"
+          element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/events"
+          element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
           }
         />
         <Route
           path="/admin/create-event"
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminRoute>
               <CreateEvent />
-            </ProtectedRoute>
+            </AdminRoute>
           }
         />
         <Route
           path="/admin/announcements"
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminRoute>
               <Announcements />
-            </ProtectedRoute>
+            </AdminRoute>
           }
         />
         <Route

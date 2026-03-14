@@ -4,6 +4,7 @@ import { FiCalendar, FiCheckCircle, FiCreditCard, FiMapPin } from "react-icons/f
 import { Link } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import { registrationApi } from "../services/api";
+import { formatDate } from "../utils/date";
 
 export default function RegisteredEvents() {
   const [items, setItems] = useState([]);
@@ -122,7 +123,7 @@ export default function RegisteredEvents() {
                       ) : null}
                       <div className="registered-info-row">
                         <FiCalendar size={16} />
-                        <span>{event.date ? new Date(event.date).toLocaleDateString() : "-"}</span>
+                        <span>{event.date ? formatDate(event.date) : "-"}</span>
                       </div>
                       <div className="registered-info-row">
                         <FiMapPin size={16} />

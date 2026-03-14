@@ -29,6 +29,9 @@ export default function EventRegistration() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const registrationClosed = event?.registrationDeadline
+    ? new Date() > new Date(event.registrationDeadline)
+    : false;
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -60,6 +63,11 @@ export default function EventRegistration() {
 
     if (event.status === "deleted") {
       setError("This event was removed by the admin");
+      return;
+    }
+
+    if (registrationClosed) {
+      setError("Registration deadline has passed");
       return;
     }
 
@@ -136,6 +144,11 @@ export default function EventRegistration() {
             This event was removed by the admin. Registration and payment are no longer available.
           </div>
         ) : null}
+        {registrationClosed ? (
+          <div className="alert alert-secondary">
+            Registration Ended
+          </div>
+        ) : null}
 
         <form className="row g-3" onSubmit={handleSubmit}>
           <div className="col-md-6">
@@ -166,8 +179,8 @@ export default function EventRegistration() {
           </div>
           {error ? <div className="col-12"><div className="alert alert-danger py-2">{error}</div></div> : null}
           <div className="col-12">
-            <button className="btn btn-primary" disabled={loading || event?.status === "deleted"} type="submit">
-            {loading ? "Processing..." : Number(event?.eventPrice || 0) > 0 ? "Pay & Register" : "Register"}
+            <button className="btn btn-primary" disabled={loading || event?.status === "deleted" || registrationClosed} type="submit">
+            {registrationClosed ? "Registration Ended" : loading ? "Processing..." : Number(event?.eventPrice || 0) > 0 ? "Pay & Register" : "Register"}
             </button>
           </div>
         </form>

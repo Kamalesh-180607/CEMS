@@ -22,10 +22,15 @@ const appendFormData = (payload) => {
     "registrationDeadline",
     "eventPrice",
     "bannerImage",
+    "removePoster",
   ];
 
   allowedKeys.forEach((key) => {
     const value = payload[key];
+    if (typeof value === "boolean") {
+      if (value) formData.append(key, "true");
+      return;
+    }
     if (value !== null && value !== undefined && value !== "") {
       formData.append(key, value);
     }
