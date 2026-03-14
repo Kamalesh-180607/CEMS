@@ -147,24 +147,32 @@ const updateEvent = async (req, res) => {
     const nextTime = updates.time !== undefined ? updates.time : oldEvent.time;
     const nextVenue = updates.venue !== undefined ? updates.venue : oldEvent.venue;
     const nextPrice = updates.eventPrice !== undefined ? Number(updates.eventPrice) : Number(oldEvent.eventPrice);
+    const nextRegistrationDeadline = updates.registrationDeadline !== undefined
+      ? updates.registrationDeadline
+      : oldEvent.registrationDeadline;
+    const nextDescription = updates.description !== undefined ? updates.description : oldEvent.description;
 
     const changeMessages = [];
     let category = "important-notice";
+    const audienceSignals = [];
 
     if (normalizeDateKey(nextDate) && normalizeDateKey(nextDate) !== normalizeDateKey(oldEvent.date)) {
       changeMessages.push(
         `Date has been updated from ${formatDateLabel(oldEvent.date)} to ${formatDateLabel(nextDate)}`
       );
+      audienceSignals.push("all");
     }
 
     if ((nextTime || "") !== (oldEvent.time || "")) {
       changeMessages.push(`Time has been updated from ${oldEvent.time || "N/A"} to ${nextTime || "N/A"}`);
       category = "time-change";
+      audienceSignals.push("registered");
     }
 
     if ((nextVenue || "") !== (oldEvent.venue || "")) {
       changeMessages.push(`Venue has been updated from ${oldEvent.venue || "N/A"} to ${nextVenue || "N/A"}`);
       if (category === "important-notice") category = "venue-change";
+      audienceSignals.push("registered");
     }
 
     if (!Number.isNaN(nextPrice) && Number(nextPrice) !== Number(oldEvent.eventPrice)) {
@@ -174,18 +182,36 @@ const updateEvent = async (req, res) => {
       if (Number(nextPrice) < Number(oldEvent.eventPrice)) {
         category = "discount";
       }
+      audienceSignals.push("all");
+    }
+
+    if (
+      normalizeDateKey(nextRegistrationDeadline)
+      && normalizeDateKey(nextRegistrationDeadline) !== normalizeDateKey(oldEvent.registrationDeadline)
+    ) {
+      changeMessages.push(
+        `Registration deadline changed from ${formatDateLabel(oldEvent.registrationDeadline)} to ${formatDateLabel(nextRegistrationDeadline)}`
+      );
+      audienceSignals.push("all");
+    }
+
+    if ((nextDescription || "") !== (oldEvent.description || "")) {
+      changeMessages.push("Participant instructions/details have been updated");
+      audienceSignals.push("registered");
     }
 
     Object.assign(oldEvent, updates);
     const updatedEvent = await oldEvent.save();
 
     if (changeMessages.length > 0) {
+      const targetAudience = audienceSignals.includes("all") ? "all" : "registered";
       await Announcement.create({
         eventId: updatedEvent._id,
         adminId: req.user._id,
         title: `${updatedEvent.title} updated`,
         message: `${updatedEvent.title}: ${changeMessages.join(". ")}.`,
         category,
+        targetAudience,
         createdAt: new Date(),
       });
     }

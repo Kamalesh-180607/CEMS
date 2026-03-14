@@ -7,7 +7,17 @@ const router = express.Router();
 
 const FALLBACK_REPLY = "I'm not sure about that. Try asking about events, registrations, payments, or announcements.";
 
-const containsAny = (text, terms) => terms.some((term) => text.includes(term));
+const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const containsAny = (text, terms) => {
+  const normalizedText = String(text || "").toLowerCase();
+  return terms.some((term) => {
+    const normalizedTerm = String(term || "").toLowerCase();
+    if (!normalizedTerm) return false;
+    const boundaryRegex = new RegExp(`(^|\\W)${escapeRegex(normalizedTerm)}(\\W|$)`, "i");
+    return boundaryRegex.test(normalizedText);
+  });
+};
 
 const sendReply = (res, message, reply, statusCode = 200) => {
   console.log("Assistant question:", message);
@@ -24,6 +34,143 @@ const formatDate = (value) => {
     month: "short",
     year: "numeric",
   });
+};
+
+const getStartOfDay = (date) => {
+  const copy = new Date(date);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+};
+
+const getEndOfDay = (date) => {
+  const copy = new Date(date);
+  copy.setHours(23, 59, 59, 999);
+  return copy;
+};
+
+const extractDateFromMessage = (message) => {
+  const text = String(message || "");
+
+  // dd/mm/yyyy or dd-mm-yyyy
+  const dmyMatch = text.match(/\b(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})\b/);
+  if (dmyMatch) {
+    const day = Number(dmyMatch[1]);
+    const month = Number(dmyMatch[2]);
+    const year = Number(dmyMatch[3]);
+    const date = new Date(year, month - 1, day);
+    if (!Number.isNaN(date.getTime())) return date;
+  }
+
+  // yyyy-mm-dd
+  const ymdMatch = text.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/);
+  if (ymdMatch) {
+    const year = Number(ymdMatch[1]);
+    const month = Number(ymdMatch[2]);
+    const day = Number(ymdMatch[3]);
+    const date = new Date(year, month - 1, day);
+    if (!Number.isNaN(date.getTime())) return date;
+  }
+
+  return null;
+};
+
+const detectEventIntent = (message) => {
+  const text = String(message || "").toLowerCase();
+  const hasEventSignal = containsAny(text, [
+    "event",
+    "events",
+    "technical",
+    "non technical",
+    "non-technical",
+    "workshop",
+    "workshops",
+    "upcoming",
+    "today",
+    "tomorrow",
+    "free",
+    "paid",
+    "on",
+  ]);
+
+  if (!hasEventSignal) {
+    return null;
+  }
+
+  const query = { status: "active" };
+  let intentTitle = "Matching Events";
+
+  if (containsAny(text, ["technical"]) && !containsAny(text, ["non technical", "non-technical"])) {
+    query.eventType = "Technical";
+    intentTitle = "Technical Events";
+  }
+
+  if (containsAny(text, ["non technical", "non-technical"])) {
+    query.eventType = "Non Technical";
+    intentTitle = "Non Technical Events";
+  }
+
+  if (containsAny(text, ["workshop", "workshops"])) {
+    query.eventType = "Workshop";
+    intentTitle = "Workshop Events";
+  }
+
+  if (containsAny(text, ["free"])) {
+    query.eventPrice = 0;
+    intentTitle = "Free Events";
+  }
+
+  if (containsAny(text, ["paid"])) {
+    query.eventPrice = { $gt: 0 };
+    intentTitle = "Paid Events";
+  }
+
+  const today = new Date();
+  const extractedDate = extractDateFromMessage(text);
+
+  if (containsAny(text, ["events today", "today"])) {
+    query.date = {
+      $gte: getStartOfDay(today),
+      $lte: getEndOfDay(today),
+    };
+    intentTitle = "Today's Events";
+  } else if (containsAny(text, ["events tomorrow", "tomorrow"])) {
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    query.date = {
+      $gte: getStartOfDay(tomorrow),
+      $lte: getEndOfDay(tomorrow),
+    };
+    intentTitle = "Tomorrow's Events";
+  } else if (containsAny(text, ["upcoming"])) {
+    query.date = { $gte: getStartOfDay(today) };
+    intentTitle = "Upcoming Events";
+  } else if (extractedDate) {
+    query.date = {
+      $gte: getStartOfDay(extractedDate),
+      $lte: getEndOfDay(extractedDate),
+    };
+    intentTitle = `Events on ${formatDate(extractedDate)}`;
+  }
+
+  return { query, intentTitle };
+};
+
+const formatEventList = (events) =>
+  events
+    .map((event, index) => {
+      const fee = Number(event.eventPrice || 0) > 0 ? `INR ${Number(event.eventPrice || 0)}` : "Free";
+      return `${index + 1}. ${event.title} | Date: ${formatDate(event.date)} | Time: ${event.time || "TBA"} | Venue: ${
+        event.venue || "TBA"
+      } | Fee: ${fee}`;
+    })
+    .join("\n");
+
+const buildDeterministicEventReply = (intentTitle, events) => {
+  if (!events.length) {
+    return "No events found for this request.";
+  }
+
+  return `${intentTitle}:\n${formatEventList(events)}`;
 };
 
 const matchesEventTitle = (message, eventTitle) => {
@@ -128,6 +275,38 @@ router.post("/", protect, async (req, res) => {
         trimmed,
         "You can view announcements in the Announcements tab in the navigation bar."
       );
+    }
+
+    const eventIntent = detectEventIntent(trimmed);
+    if (eventIntent) {
+      const filteredEvents = await Event.find(eventIntent.query).sort({ date: 1, time: 1 }).lean();
+      const deterministicReply = buildDeterministicEventReply(eventIntent.intentTitle, filteredEvents);
+
+      const eventDataForPrompt = filteredEvents.length
+        ? formatEventList(filteredEvents)
+        : "No events found for this request.";
+
+      const eventIntentPrompt = [
+        "You are an event assistant for a Campus Event Management System (CEMS).",
+        "The events below are already filtered from MongoDB based on the student's request.",
+        "Respond in a friendly conversational way, but do not add events that are not in the filtered list.",
+        "If no events are available, use exactly: No events found for this request.",
+        `Intent: ${eventIntent.intentTitle}`,
+        "Filtered events:",
+        eventDataForPrompt,
+        `Student question: ${trimmed}`,
+      ].join("\n\n");
+
+      try {
+        const aiReply = await generateResponse(eventIntentPrompt);
+        if (aiReply) {
+          return sendReply(res, trimmed, aiReply);
+        }
+      } catch (eventPromptError) {
+        console.error("Event intent AI error, using deterministic reply:", eventPromptError.message);
+      }
+
+      return sendReply(res, trimmed, deterministicReply);
     }
 
     const events = await Event.find({ status: "active" }).sort({ date: 1 }).lean();

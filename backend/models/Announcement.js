@@ -57,6 +57,11 @@ const announcementSchema = new mongoose.Schema(
       enum: ["time-change", "venue-change", "discount", "important-notice"],
       default: "important-notice",
     },
+    targetAudience: {
+      type: String,
+      enum: ["all", "registered"],
+      default: "all",
+    },
   },
   { timestamps: true }
 );

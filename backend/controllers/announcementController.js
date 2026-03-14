@@ -1,11 +1,29 @@
 const Announcement = require("../models/Announcement");
+const Registration = require("../models/Registration");
+
+const buildStudentVisibilityQuery = (studentId, registeredEventIds = []) => ({
+  clearedByStudents: { $ne: studentId },
+  $or: [
+    { targetAudience: "all" },
+    { targetAudience: { $exists: false } },
+    {
+      targetAudience: "registered",
+      eventId: { $in: registeredEventIds },
+    },
+  ],
+});
 
 const getAnnouncements = async (req, res) => {
   try {
     const baseQuery = {};
 
     if (req.user?.role === "student") {
-      baseQuery.clearedByStudents = { $ne: req.user._id };
+      const registrations = await Registration.find({ studentId: req.user._id }).select("eventId");
+      const registeredEventIds = registrations
+        .map((entry) => entry.eventId)
+        .filter(Boolean);
+
+      Object.assign(baseQuery, buildStudentVisibilityQuery(req.user._id, registeredEventIds));
       const announcements = await Announcement.find(baseQuery)
         .populate("eventId", "title date time venue")
         .sort({ createdAt: -1 })
@@ -58,8 +76,13 @@ const getUnreadAnnouncementsCount = async (req, res) => {
       return res.status(403).json({ message: "Only students can view unread announcement count" });
     }
 
+    const registrations = await Registration.find({ studentId: req.user._id }).select("eventId");
+    const registeredEventIds = registrations
+      .map((entry) => entry.eventId)
+      .filter(Boolean);
+
     const unreadCount = await Announcement.countDocuments({
-      clearedByStudents: { $ne: req.user._id },
+      ...buildStudentVisibilityQuery(req.user._id, registeredEventIds),
       viewedBy: { $ne: req.user._id },
     });
 
@@ -75,9 +98,14 @@ const markAnnouncementsAsViewed = async (req, res) => {
       return res.status(403).json({ message: "Only students can mark announcements as viewed" });
     }
 
+    const registrations = await Registration.find({ studentId: req.user._id }).select("eventId");
+    const registeredEventIds = registrations
+      .map((entry) => entry.eventId)
+      .filter(Boolean);
+
     await Announcement.updateMany(
       {
-        clearedByStudents: { $ne: req.user._id },
+        ...buildStudentVisibilityQuery(req.user._id, registeredEventIds),
         viewedBy: { $ne: req.user._id },
       },
       {
