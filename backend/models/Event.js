@@ -73,6 +73,28 @@ const eventSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    status: {
+      type: String,
+      default: "active",
+      enum: ["active", "deleted"],
+    },
+    updates: [
+      {
+        message: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        date: {
+          type: Date,
+          default: Date.now,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   { timestamps: true }
 );

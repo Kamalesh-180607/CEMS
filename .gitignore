@@ -1,23 +1,39 @@
-# Node
+# Dependencies
 node_modules/
 
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+**/.env
+**/.env.local
+**/.env.development
+**/.env.production
+**/.env.*
+
 # Logs
+logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Env files
-.env
-.env.*
-
-# Build outputs
+# Build and coverage
 dist/
 build/
+coverage/
 
-# OS files
+# Temp and cache
+*.tmp
+*.temp
+.cache/
+
+# Editor and OS
+.vscode/
 .DS_Store
 Thumbs.db
 
-# Uploads
+# Uploads (keep placeholder)
 backend/uploads/*
 !backend/uploads/.gitkeep

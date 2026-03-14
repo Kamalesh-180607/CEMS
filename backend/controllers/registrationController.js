@@ -16,6 +16,10 @@ const createOrder = async (req, res) => {
       return res.status(404).json({ message: "Event not found" });
     }
 
+    if (event.status === "deleted") {
+      return res.status(400).json({ message: "This event was removed by the admin" });
+    }
+
     if (event.eventPrice <= 0) {
       return res.status(400).json({ message: "This event is free. No payment required." });
     }
@@ -58,6 +62,10 @@ const registerForEvent = async (req, res) => {
       return res.status(404).json({ message: "Event not found" });
     }
 
+    if (event.status === "deleted") {
+      return res.status(400).json({ message: "This event was removed by the admin" });
+    }
+
     const existingRegistration = await Registration.findOne({
       eventId,
       studentId: req.user._id,
@@ -85,6 +93,7 @@ const registerForEvent = async (req, res) => {
       paymentId: paymentId || "",
       orderId: orderId || "",
       registrationDate: new Date(),
+      registeredAt: new Date(),
     });
 
     return res.status(201).json({
@@ -122,8 +131,8 @@ const getRegistrationsByEvent = async (req, res) => {
 const getMyRegisteredEvents = async (req, res) => {
   try {
     const registrations = await Registration.find({ studentId: req.user._id })
-      .populate("eventId", "title date time venue bannerImage eventType hostingClub")
-      .sort({ registrationDate: -1, createdAt: -1 });
+      .populate("eventId", "title date time venue bannerImage eventType hostingClub status updates")
+      .sort({ registeredAt: -1, registrationDate: -1, createdAt: -1 });
 
     const payload = registrations
       .filter((entry) => entry.eventId)
@@ -132,7 +141,8 @@ const getMyRegisteredEvents = async (req, res) => {
         event: entry.eventId,
         paymentStatus: entry.paymentStatus,
         registrationStatus: "registered",
-        registrationDate: entry.registrationDate || entry.createdAt,
+        registrationDate: entry.registrationDate || entry.registeredAt || entry.createdAt,
+        registeredAt: entry.registeredAt || entry.registrationDate || entry.createdAt,
       }));
 
     return res.status(200).json(payload);
@@ -141,4 +151,34 @@ const getMyRegisteredEvents = async (req, res) => {
   }
 };
 
-module.exports = { createOrder, registerForEvent, getRegistrationsByEvent, getMyRegisteredEvents };
+const removeMyRegistration = async (req, res) => {
+  try {
+    const registration = await Registration.findById(req.params.id).populate("eventId", "status");
+
+    if (!registration) {
+      return res.status(404).json({ message: "Registration not found" });
+    }
+
+    if (String(registration.studentId) !== String(req.user._id)) {
+      return res.status(403).json({ message: "You can only remove your own registration" });
+    }
+
+    if (registration.eventId && registration.eventId.status !== "deleted") {
+      return res.status(400).json({ message: "Only deleted events can be removed from your list" });
+    }
+
+    await Registration.findByIdAndDelete(req.params.id);
+
+    return res.status(200).json({ message: "Registration removed" });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to remove registration", error: error.message });
+  }
+};
+
+module.exports = {
+  createOrder,
+  registerForEvent,
+  getRegistrationsByEvent,
+  getMyRegisteredEvents,
+  removeMyRegistration,
+};

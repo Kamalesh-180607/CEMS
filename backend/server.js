@@ -3,6 +3,8 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const path = require("path");
 const connectDB = require("./config/db");
+const aiRoutes = require("./routes/ai");
+const assistantRoutes = require("./routes/assistant");
 
 dotenv.config();
 connectDB();
@@ -20,10 +22,17 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/events", require("./routes/eventRoutes"));
+app.use("/api/admin/events", require("./routes/adminEventRoutes"));
+app.use("/api/admin", require("./routes/adminRoutes"));
 app.use("/api/register", require("./routes/registrationRoutes"));
 app.use("/api/registrations", require("./routes/registrationRoutes"));
+app.use("/api/payment", require("./routes/payment"));
 app.use("/api/users", require("./routes/userRoutes"));
+app.use("/api/students", require("./routes/studentRoutes"));
+app.use("/api/student", require("./routes/studentRoutes"));
 app.use("/api/announcements", require("./routes/announcementRoutes"));
+app.use("/api/ai", aiRoutes);
+app.use("/api/assistant", assistantRoutes);
 
 app.use((err, req, res, next) => {
   if (err && err.message) {

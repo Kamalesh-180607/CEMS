@@ -32,6 +32,11 @@ const registrationSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    status: {
+      type: String,
+      enum: ["registered"],
+      default: "registered",
+    },
     amountPaid: {
       type: Number,
       default: 0,
@@ -50,6 +55,10 @@ const registrationSchema = new mongoose.Schema(
       default: "",
     },
     registrationDate: {
+      type: Date,
+      default: Date.now,
+    },
+    registeredAt: {
       type: Date,
       default: Date.now,
     },

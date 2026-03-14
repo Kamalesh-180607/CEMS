@@ -1,5 +1,36 @@
 const Event = require("../models/Event");
 const Announcement = require("../models/Announcement");
+const Registration = require("../models/Registration");
+const { getRecommendedEvents } = require("../services/geminiRecommendation");
+
+const formatCurrency = (value) => `Rs. ${Number(value || 0)}`;
+
+const normalizeDateKey = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+};
+
+const formatDateLabel = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const normalizeRecommendationType = (value) => {
+  const normalized = String(value || "").toLowerCase().trim();
+  if (!normalized) return "";
+  if (normalized === "technical") return "Technical";
+  if (normalized === "non technical" || normalized === "non-technical") return "Non Technical";
+  if (normalized === "workshop" || normalized === "workshops") return "Workshop";
+  return "";
+};
 
 const parseDateTime = (eventDate, eventTime) => {
   const date = new Date(eventDate);
@@ -36,6 +67,9 @@ const getEvents = async (req, res) => {
 
     if (req.user && req.user.role === "admin") {
       query.adminId = req.user._id;
+    } else {
+      // Students/public should never receive deleted events in dashboard/event listing.
+      query.status = "active";
     }
 
     if (eventType) {
@@ -91,12 +125,12 @@ const getEventById = async (req, res) => {
 
 const updateEvent = async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id);
-    if (!event) {
+    const oldEvent = await Event.findById(req.params.id);
+    if (!oldEvent) {
       return res.status(404).json({ message: "Event not found" });
     }
 
-    if (String(event.adminId) !== String(req.user._id)) {
+    if (String(oldEvent.adminId) !== String(req.user._id)) {
       return res.status(403).json({ message: "You cannot update another admin's event" });
     }
 
@@ -109,36 +143,50 @@ const updateEvent = async (req, res) => {
       updates.bannerImage = `/uploads/${req.file.filename}`;
     }
 
-    const trackedChanges = [];
-    if (updates.time && updates.time !== event.time) trackedChanges.push("time-change");
-    if (updates.venue && updates.venue !== event.venue) trackedChanges.push("venue-change");
-    if (
-      updates.eventPrice !== undefined &&
-      Number(updates.eventPrice) < Number(event.eventPrice)
-    ) {
-      trackedChanges.push("discount");
+    const nextDate = updates.date !== undefined ? updates.date : oldEvent.date;
+    const nextTime = updates.time !== undefined ? updates.time : oldEvent.time;
+    const nextVenue = updates.venue !== undefined ? updates.venue : oldEvent.venue;
+    const nextPrice = updates.eventPrice !== undefined ? Number(updates.eventPrice) : Number(oldEvent.eventPrice);
+
+    const changeMessages = [];
+    let category = "important-notice";
+
+    if (normalizeDateKey(nextDate) && normalizeDateKey(nextDate) !== normalizeDateKey(oldEvent.date)) {
+      changeMessages.push(
+        `Date has been updated from ${formatDateLabel(oldEvent.date)} to ${formatDateLabel(nextDate)}`
+      );
     }
 
-    Object.assign(event, updates);
-    const updatedEvent = await event.save();
+    if ((nextTime || "") !== (oldEvent.time || "")) {
+      changeMessages.push(`Time has been updated from ${oldEvent.time || "N/A"} to ${nextTime || "N/A"}`);
+      category = "time-change";
+    }
 
-    if (trackedChanges.length > 0 || updates.description) {
-      const category = trackedChanges[0] || "important-notice";
-      let message = `Update in ${updatedEvent.title}: important notice.`;
+    if ((nextVenue || "") !== (oldEvent.venue || "")) {
+      changeMessages.push(`Venue has been updated from ${oldEvent.venue || "N/A"} to ${nextVenue || "N/A"}`);
+      if (category === "important-notice") category = "venue-change";
+    }
 
-      if (trackedChanges.includes("time-change")) {
-        message = `Update in ${updatedEvent.title}: time changed to ${updatedEvent.time}.`;
-      } else if (trackedChanges.includes("venue-change")) {
-        message = `Update in ${updatedEvent.title}: venue changed to ${updatedEvent.venue}.`;
-      } else if (trackedChanges.includes("discount")) {
-        message = `Discount update for ${updatedEvent.title}: new fee is Rs. ${updatedEvent.eventPrice}.`;
+    if (!Number.isNaN(nextPrice) && Number(nextPrice) !== Number(oldEvent.eventPrice)) {
+      changeMessages.push(
+        `Registration fee changed from ${formatCurrency(oldEvent.eventPrice)} to ${formatCurrency(nextPrice)}`
+      );
+      if (Number(nextPrice) < Number(oldEvent.eventPrice)) {
+        category = "discount";
       }
+    }
 
+    Object.assign(oldEvent, updates);
+    const updatedEvent = await oldEvent.save();
+
+    if (changeMessages.length > 0) {
       await Announcement.create({
         eventId: updatedEvent._id,
         adminId: req.user._id,
-        message,
+        title: `${updatedEvent.title} updated`,
+        message: `${updatedEvent.title}: ${changeMessages.join(". ")}.`,
         category,
+        createdAt: new Date(),
       });
     }
 
@@ -150,6 +198,7 @@ const updateEvent = async (req, res) => {
 
 const deleteEvent = async (req, res) => {
   try {
+    console.log("Deleting event:", req.params.id);
     const event = await Event.findById(req.params.id);
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
@@ -159,7 +208,8 @@ const deleteEvent = async (req, res) => {
       return res.status(403).json({ message: "You cannot delete another admin's event" });
     }
 
-    await event.deleteOne();
+    event.status = "deleted";
+    await event.save();
     return res.status(200).json({ message: "Event deleted successfully" });
   } catch (error) {
     return res.status(500).json({ message: "Failed to delete event", error: error.message });
@@ -168,10 +218,67 @@ const deleteEvent = async (req, res) => {
 
 const getMyEvents = async (req, res) => {
   try {
-    const events = await Event.find({ adminId: req.user._id }).sort({ date: 1 });
+    const events = await Event.find({ adminId: req.user._id, status: "active" }).sort({ date: 1 });
     return res.status(200).json(events);
   } catch (error) {
     return res.status(500).json({ message: "Failed to fetch admin events", error: error.message });
+  }
+};
+
+const getEventRecommendations = async (req, res) => {
+  try {
+    if (req.user?.role !== "student") {
+      return res.status(403).json({ message: "Only students can access recommendations" });
+    }
+
+    const requestedType = normalizeRecommendationType(req.query.type);
+
+    const registrations = await Registration.find({ studentId: req.user._id })
+      .populate("eventId", "title description eventType hostingClub venue")
+      .sort({ createdAt: -1 });
+
+    const registeredEvents = registrations
+      .map((entry) => entry.eventId)
+      .filter(Boolean);
+
+    const registeredEventIds = registrations
+      .map((entry) => String(entry.eventId?._id || entry.eventId || ""))
+      .filter(Boolean);
+
+    const candidateQuery = {
+      status: "active",
+      _id: { $nin: registeredEventIds },
+    };
+
+    if (requestedType) {
+      candidateQuery.eventType = requestedType;
+    }
+
+    const candidateEvents = await Event.find(candidateQuery).sort({ date: 1 });
+
+    const popularityRows = await Registration.aggregate([
+      {
+        $group: {
+          _id: "$eventId",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const popularityMap = new Map(
+      popularityRows.map((row) => [String(row._id), Number(row.count || 0)])
+    );
+
+    const recommendedEvents = await getRecommendedEvents({
+      studentDepartment: req.user.department,
+      registeredEvents,
+      candidateEvents,
+      popularityMap,
+    });
+
+    return res.status(200).json({ recommendedEvents });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to fetch recommendations", error: error.message });
   }
 };
 
@@ -182,4 +289,5 @@ module.exports = {
   updateEvent,
   deleteEvent,
   getMyEvents,
+  getEventRecommendations,
 };

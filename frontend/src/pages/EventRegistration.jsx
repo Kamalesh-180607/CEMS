@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import { eventsApi, registrationApi } from "../services/api";
+import { eventsApi, paymentApi, registrationApi } from "../services/api";
 
 const loadRazorpay = () =>
   new Promise((resolve) => {
@@ -58,6 +58,11 @@ export default function EventRegistration() {
     e.preventDefault();
     if (!event) return;
 
+    if (event.status === "deleted") {
+      setError("This event was removed by the admin");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -73,9 +78,19 @@ export default function EventRegistration() {
         return;
       }
 
-      const { data } = await registrationApi.createOrder({ eventId: id });
+      const { data } = await paymentApi.createOrder({
+        eventId: id,
+        amount: Number(event.eventPrice || 0),
+      });
+
+      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || data.key;
+      if (!razorpayKey) {
+        setError("Razorpay key is missing. Configure VITE_RAZORPAY_KEY_ID.");
+        return;
+      }
+
       const options = {
-        key: data.key,
+        key: razorpayKey,
         amount: data.order.amount,
         currency: data.order.currency,
         name: "CEMS",
@@ -110,12 +125,17 @@ export default function EventRegistration() {
   };
 
   return (
-    <div className="container py-4">
+    <div className="page-shell py-4">
       <Navbar />
       <section className="card border-0 shadow-sm p-4 mt-3">
         <h3 className="mb-1">Event Registration</h3>
         <p className="mb-1">{event?.title}</p>
         <p className="text-secondary mb-4">{event ? (Number(event.eventPrice) > 0 ? `Fee: Rs. ${event.eventPrice}` : "Fee: Free") : ""}</p>
+        {event?.status === "deleted" ? (
+          <div className="alert alert-warning">
+            This event was removed by the admin. Registration and payment are no longer available.
+          </div>
+        ) : null}
 
         <form className="row g-3" onSubmit={handleSubmit}>
           <div className="col-md-6">
@@ -146,7 +166,7 @@ export default function EventRegistration() {
           </div>
           {error ? <div className="col-12"><div className="alert alert-danger py-2">{error}</div></div> : null}
           <div className="col-12">
-            <button className="btn btn-primary" disabled={loading} type="submit">
+            <button className="btn btn-primary" disabled={loading || event?.status === "deleted"} type="submit">
             {loading ? "Processing..." : Number(event?.eventPrice || 0) > 0 ? "Pay & Register" : "Register"}
             </button>
           </div>

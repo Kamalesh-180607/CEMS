@@ -2,6 +2,11 @@ const mongoose = require("mongoose");
 
 const announcementSchema = new mongoose.Schema(
   {
+    title: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     eventId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Event",
@@ -12,6 +17,36 @@ const announcementSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    dismissedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    viewedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    hiddenByAdmins: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    clearedByStudents: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    clearedByAdmins: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
     message: {
       type: String,
       required: true,

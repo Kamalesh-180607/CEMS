@@ -20,6 +20,25 @@ const register = async (req, res) => {
       return res.status(400).json({ message: "Student profile fields are required" });
     }
 
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ message: "Name cannot be empty" });
+    }
+
+    const phoneRegex = /^[0-9]{10}$/;
+    if (role === "student" && !phoneRegex.test(mobileNumber)) {
+      return res.status(400).json({ message: "Phone number must contain exactly 10 digits" });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({ message: "Password must contain uppercase, lowercase, number and special character" });
+    }
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(409).json({ message: "Email already registered" });
